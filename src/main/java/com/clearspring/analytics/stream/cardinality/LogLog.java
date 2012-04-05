@@ -155,20 +155,24 @@ public class LogLog implements ICardinality
     {
         int numEstimators = (estimators == null) ? 0 : estimators.length;
         LogLog[] lls = new LogLog[numEstimators+1];
-        if(numEstimators > 0)
+
+        if (numEstimators == 0) {
+            lls[numEstimators] = this;
+            return lls;
+        }
+
+        for(int i=0; i<numEstimators; i++)
         {
-            for(int i=0; i<numEstimators; i++)
+            if(estimators[i] instanceof LogLog)
             {
-                if(estimators[i] instanceof LogLog)
-                {
-                    lls[i] = (LogLog)estimators[i];
-                }
-                else
-                {
-                    throw new LogLogMergeException("Unable to merge LogLog with "+estimators[i].getClass().getName());
-                }
+                lls[i] = (LogLog)estimators[i];
+            }
+            else
+            {
+                throw new LogLogMergeException("Unable to merge LogLog with "+estimators[i].getClass().getName());
             }
         }
+
         lls[numEstimators] = this;
         return lls;
     }
@@ -181,27 +185,30 @@ public class LogLog implements ICardinality
     protected static byte[] mergeBytes(LogLog... estimators) throws LogLogMergeException
     {
         byte[] mergedBytes = null;
-        int numEstimators = (estimators == null) ? 0 : estimators.length;
-        if(numEstimators > 0)
+        int numEstimators = (null == estimators) ? 0 : estimators.length;
+
+        if ( numEstimators == 0 )
+            return mergedBytes;
+
+
+        int size = estimators[0].sizeof();
+        mergedBytes = new byte[size];
+
+        for(int e=0; e<numEstimators; e++)
         {
-            int size = estimators[0].sizeof();
-            mergedBytes = new byte[size];
-
-            for(int e=0; e<numEstimators; e++)
+            if(estimators[e].sizeof() != size)
             {
-                if(estimators[e].sizeof() != size)
-                {
-                    throw new LogLogMergeException("Cannot merge estimators of different sizes");
-                }
+                throw new LogLogMergeException("Cannot merge estimators of different sizes");
+            }
 
-                for(int b=0; b<size; b++)
-                {
-                    byte mergedByte = mergedBytes[b];
-                    byte estimatorByte = estimators[e].M[b];
-                    mergedBytes[b] = estimatorByte > mergedByte ? estimatorByte : mergedByte;
-                }
+            for(int b=0; b<size; b++)
+            {
+                byte mergedByte = mergedBytes[b];
+                byte estimatorByte = estimators[e].M[b];
+                mergedBytes[b] = estimatorByte > mergedByte ? estimatorByte : mergedByte;
             }
         }
+
         return mergedBytes;
     }
 
